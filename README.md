@@ -1,4 +1,4 @@
-# AegisLoop — The Living Loop
+# AegisLoop : The Living Loop
 
 ### AI FinOps × Self-Healing Context × Product Telemetry
 
@@ -12,7 +12,7 @@ It helps teams identify why AI systems fail, determine whether the fix belongs i
 
 ---
 
-## The Problem: Three Broken Silos
+## The Problem : Three Broken Silos
 
 - **AI FinOps:** Tracks token usage and spending but struggles to explain the root cause of waste.
 - **Context Engineering:** Adds instructions and business rules, often without knowing which ones actually improve accuracy.
@@ -38,7 +38,7 @@ The following diagram shows how AegisLoop identifies failures, routes them to th
 ---
 
 ## The Living Loop
-
+![Living loop flow circle](LivingLoop.jpeg)
 1. **Observe:** Capture user edits, retries, abandoned outputs, and other product events.
 2. **Measure:** Connect failure patterns to token usage and AI operating costs.
 3. **Diagnose:** Analyze context, application behavior, and business rules to identify likely causes.
@@ -56,63 +56,6 @@ The updated system generates new product telemetry, allowing the cycle to contin
 **Don't just track AI costs. Understand what causes them, fix the underlying problems, and measure whether those fixes work.**
 
 AegisLoop brings AI spending, product behavior, and system improvement into one continuous feedback loop.
-
-
-The Four Core Components
-------------------------
-
-### 1\. Product Telemetry — Understand Failure
-
-Capture privacy-conscious interaction signals such as edits, regenerations, abandonment, semantic drift, and token usage.
-
-Focus on aggregated failure patterns rather than employee surveillance.
-
-### 2\. FinOps Ledger — Measure the Cost
-
-Connect AI usage with task outcomes to measure:
-
-*   Cost per successful task
-    
-*   Waste from retries and abandoned outputs
-    
-*   Context efficiency and token overhead
-    
-
-Turn spending data into actionable engineering insights.
-
-### 3\. Context Brain — Retrieve What Matters
-
-Maintain versioned business rules, database schemas, verified query examples, and known failure patterns.
-
-Retrieve relevant context instead of sending the entire knowledge base with every request.
-
-### 4\. Self-Healing Engine — Diagnose and Improve
-
-Cluster recurring failures, identify likely root causes, and classify each issue :
-| **Fix Domain** | **What It Means** |
-|---|---|
-| **Code** | Fix broken tools, retrievers, or application logic. |
-| **Context** | Identify and suggest missing or incorrect business rules. |
-| **Policy** | Send conflicting definitions to a human owner for a decision. |
-
-The engine proposes changes for review rather than silently modifying production systems.
-
-The Living Loop
----------------
-
-Plain textANTLR4BashCC#CSSCoffeeScriptCMakeDartDjangoDockerEJSErlangGitGoGraphQLGroovyHTMLJavaJavaScriptJSONJSXKotlinLaTeXLessLuaMakefileMarkdownMATLABMarkupObjective-CPerlPHPPowerShell.propertiesProtocol BuffersPythonRRubySass (Sass)Sass (Scss)SchemeSQLShellSwiftSVGTSXTypeScriptWebAssemblyYAMLXML`   Observe → Cluster → Diagnose → Propose   ↑                         ↓Verify ← Deploy After Approval   `
-
-1.  Detect recurring failure patterns.
-    
-2.  Group related events into failure clusters.
-    
-3.  Diagnose the likely root cause.
-    
-4.  Generate a proposed code, context, or policy fix.
-    
-5.  Request review from the responsible owner.
-    
-6.  Measure whether the approved change improves outcomes.
     
 
 Metrics That Matter
