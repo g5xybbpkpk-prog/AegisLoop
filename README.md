@@ -75,7 +75,13 @@ Metrics That Matter
 Implementation Stack
 --------------------
 
-**LayerProposed technology**TelemetryOpenTelemetry + Langfuse / LangSmithFinOpsClickHouse + dbtContextMarkdown, YAML, Qdrant / WeaviateDiagnosisLLM-assisted failure triageWorkflowGitHub Actions + reviewed pull requests
+| **Layer** | **Proposed Technology** |
+|---|---|
+| Telemetry | OpenTelemetry + Langfuse / LangSmith |
+| FinOps | ClickHouse + dbt |
+| Context | Markdown, YAML, Qdrant / Weaviate |
+| Diagnosis | LLM-assisted failure triage |
+| Workflow | GitHub Actions + reviewed pull requests |
 
 _These are proposed integration choices, not claims that every integration is already implemented._
 
