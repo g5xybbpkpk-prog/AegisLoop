@@ -1,268 +1,178 @@
-# AegisLoop — AI FinOps, Self-Healing Context, Product Telemetry & The Living Loop
-
-> **Prototype Status:** Offline, deterministic simulation of an enterprise AI optimization control plane. Zero API keys, zero GPU, zero network calls. All metrics below are simulated.
-
-<p align="center">
-  <img src="./assets/architecture.png" alt="AegisLoop AI Control Plane Architecture" width="900" />
-</p>
-
-## Table of Contents
-- [What Problem AegisLoop Addresses](#what-problem-aegisloop-addresses)
-- [Why Separate Tools Fall Short](#why-separate-tools-fall-short)
-- [The Four Pillars at a Glance](#the-four-pillars-at-a-glance)
-- [Architecture](#architecture)
-- [Simulated Benchmark Results](#simulated-benchmark-results)
-- [Pillar 1 — Token FinOps & ROI-Aware Routing](#pillar-1--token-finops--roi-aware-routing)
-- [Pillar 2 — Data Analyst AI Agent & Context Ablation](#pillar-2--data-analyst-ai-agent--context-ablation)
-- [Pillar 3 — AI Product Telemetry & Edit Forensics](#pillar-3--ai-product-telemetry--edit-forensics)
-- [Pillar 4 — The Living Loop](#pillar-4--the-living-loop)
-- [The Math Under the Hood](#the-math-under-the-hood)
-- [Dashboard — Four Tabs](#dashboard--four-tabs)
-- [Quickstart & Reproducibility](#quickstart--reproducibility)
-- [Repository Structure](#repository-structure)
-- [Honest Limitations, Why I Refuse to Score People & What's Next](#honest-limitations-why-i-refuse-to-score-people--whats-next)
-
-## What Problem AegisLoop Addresses
-
-Most teams trying to get their arms around enterprise AI treat it as three separate problems owned by three different groups:
-
-1. **FinOps** builds a token dashboard to figure out why the monthly API bill is on fire.
-2. **Data & AI Engineering** stuffs business rules and table schemas into a Text-to-SQL agent and hopes accuracy goes up.
-3. **Product Analytics** tracks how often users edit, regenerate, or abandon AI outputs.
-
-When I looked at those three pieces, it hit me that they aren't three separate projects — they're three chapters of the same headache. If your AI bill is exploding, it's usually because users keep hitting "regenerate" and rewriting bad outputs, and they're rewriting those outputs because the agent is missing the right business rules and schema context.
-
-AegisLoop is my attempt to wire all three into a single closed loop. It is an interactive, offline, deterministic simulation that connects:
-
-- **Token spend and value** — what it costs and what it's worth
-- **Context quality** — which rules actually help
-- **Correction effort** — how much humans still have to fix
-
-Poor context → incorrect answers → edits / regenerations → increased cost. The loop makes that visible and testable.
-
-> **An upfront honesty note on the numbers:** Every figure in this repo — the 83.2% drop in monthly token spend, the 35% → 95% SQL accuracy jump, and the 160.8 → 22.5 drop in Manual Effort Index — comes from a deterministic **simulated enterprise benchmark dataset** I seeded so you can clone this repo and run the entire control plane locally with zero API keys. Treat them as a reproducible testbench showing how the loop behaves, not a live production billing statement. See [Honest Limitations](#honest-limitations-why-i-refuse-to-score-people--whats-next).
-
-## Why Separate Tools Fall Short
-
-FinOps dashboards track spend but not *why* spend recurs. Prompt-engineering tools measure token length but not marginal accuracy per token. Product analytics track clicks but not the dollar cost of retry loops.
-
-Viewed separately, you can cut cost but hurt accuracy, or add context but inflate overhead. AegisLoop treats cost, context quality, and correction effort as one system so a fix in one layer can be evaluated against its impact on the others.
-
-## The Four Pillars at a Glance
-
-| Step | Pillar | Role in the System | How I Approached It |
-| :--- | :--- | :--- | :--- |
-| 1 | Token FinOps & ROI-Aware Routing | Technical mechanism | Connects team token spend to actual verified outcomes, then routes low-complexity prompts off expensive frontier models onto quantized 8B models and a semantic cache. |
-| 2 | Data Analyst AI Agent & Context Ablation | Technical mechanism | Feeds business rules into a Text-to-SQL agent and uses leave-one-out Shapley ablation to measure how much accuracy each rule actually buys per 100 tokens. |
-| 3 | AI Product Telemetry & Edit Forensics | Technical mechanism | Tracks how often humans have to edit, regenerate, or abandon AI outputs, and puts a hard dollar figure on the tokens burned inside retry loops. |
-| 4 | **The Living Loop — Diagnostic & Remedy Framework** | Diagnostic philosophy (My Addition) | My own diagnostic layer: a systems method to diagnose *new* failure modes, separate one person's style quirk from a company-wide bug, and keep human accountability with humans. |
-
-My central insight is that AI costs, output quality, and repeated user corrections are connected. I built The Living Loop as my diagnostic contribution to connect these signals and recommend whether a problem needs a code fix, a context-rule change, a scoped preference, or human policy intervention.
-
-## Architecture
-
-### System Architecture — GitHub Native Mermaid
-
-```mermaid
-flowchart TD
-    subgraph Seed["src/data — Deterministic Seeds (Zero API Keys)"]
-        A[enterpriseSeed.ts<br/>12 workflows · 5 departments · 4 model tiers]
-        B[sqlBenchmarks.ts<br/>20 Text-to-SQL cases · 10 rules<br/>5 core / 3 patch / 2 bloat · 680 bloat tokens]
-        C[telemetryLogs.ts<br/>120 sessions · mulberry32 seeded<br/>52 hand-typed overrides · reward & latency]
-    end
-
-    subgraph Engines["src/engine — Core Engines"]
-        D[tokenFinOpsEngine.ts<br/>routing, cache, ROI math]
-        E[contextAblationEngine.ts<br/>benchmark pass/fail, LOO gains]
-        F[productTelemetryEngine.ts<br/>funnel, cost-of-recovery, clustering]
-        G[livingLoopDiagnosticEngine.ts<br/>symptom-vs-cause, repetition, dual survival]
-        H[closedLoopAutopilot.ts<br/>promote patches · prune bloat · optimistic upper-bound]
-    end
-
-    subgraph UI["React 18 + Vite + Tailwind Control Plane"]
-        I[HeaderControlBar · KpiSummaryRibbon · Seeded Demo Badges]
-        J[Tab 1: Token FinOps & Adaptive Router]
-        K[Tab 2: Data Agent Lab & Context Ablation]
-        L[Tab 3: Product Telemetry & Edit Forensics]
-        M[Tab 4: The Living Loop & Synthesis]
-    end
-
-    A --> D
-    A --> F
-    B --> E
-    C --> F
-    C --> G
-    D --> H
-    E --> H
-    F --> G
-    G --> H
-    D --> UI
-    E --> UI
-    F --> UI
-    G --> UI
-    H --> I
-    UI --> J
-    UI --> K
-    UI --> L
-    UI --> M
-```
+# AegisLoop — The Living Loop
 
-### The Living Loop — Six-Stage Diagnostic Cycle
+### AI FinOps × Self-Healing Context × Product Telemetry
 
-```mermaid
-flowchart LR
-    A[Notice<br/>signalCaptureLatencySec] --> B[Cluster<br/>workflow / model / schema]
-    B --> C[Find Root<br/>remediationBreadthCount >= 2]
-    C --> D[Propose<br/>code / rule / preference / policy]
-    D --> E[Prune<br/>retain_core / scoped_guardrail / prune_bloat / audit_dormant]
-    E --> F[Confirm<br/>reward & MEI delta]
-    F --> A
+**AI systems don't just waste money when models are expensive. They waste money when bad outputs create more work.**
 
-    style A fill:#0f172a,stroke:#38bdf8,color:#e2e8f0
-    style F fill:#0f172a,stroke:#a78bfa,color:#e2e8f0
-```
+Bad context → Bad output → Human edits and retries → More tokens → Higher costs.
 
-### Visual Overview
+**AegisLoop connects these failures into one continuous improvement loop.**
 
-[AegisLoop Architecture](./assets/architecture.png)
+It helps teams identify why AI systems fail, determine whether the fix belongs in code, context, or business policy, and propose evidence-backed improvements.
 
-**Data flow:** Seed data flows upward, diagnostics flow downward. Deterministic, auditable, observable.
+---
 
-## Simulated Benchmark Results
+## The Problem: Three Broken Silos
 
-> **All numbers below are simulated.** They come from a deterministic, seeded enterprise benchmark dataset created for local reproducibility. They are not live production measurements, independent validation, or evidence of guaranteed real-world savings.
+- **AI FinOps:** Tracks token usage and spending but struggles to explain the root cause of waste.
+- **Context Engineering:** Adds instructions and business rules, often without knowing which ones actually improve accuracy.
+- **Product Telemetry:** Tracks edits, retries, and abandoned outputs but rarely connects them to actionable fixes.
 
-The autopilot in `closedLoopAutopilot.ts` uses an optimistic assumption: when a context rule is promoted, the simulation treats it as resolving every simulated session in its mapped failure category. `simulateTelemetryAfterAutopilot` therefore models an **upper bound**, not a demonstrated production outcome.
+**AegisLoop connects all three:** Product behavior reveals failures, cost data quantifies their impact, and context analysis helps identify the cause.
 
-| Metric | Baseline | Simulated Optimized Result |
-| :--- | :--- | :--- |
-| Monthly token spend | $12,937.96 | $2,179.27, down 83.2% |
-| SQL benchmark accuracy | 35% raw; 70% with static context | 95% |
-| Prompt overhead | 930 tokens/query | 435 tokens/query |
-| Manual Effort Index | 160.8 | 22.5, approximately 86% lower |
-| Average reward score | 0.65 | 0.91 |
-| Full-reward share | 41.7% | 85.0% |
-| Edit rate | 58.3% | 15.0% |
-| Regeneration rate | 55.0% | 11.7% |
-| Cost per accepted output | $0.612 | $0.280 |
-| Net ROI multiplier | ×151.1 | ×902.1 |
-| Annualized modeled savings | — | $129,467 |
+---
 
-Annualized = (FinOps routing savings + recovered retry-loop spend) × 12
+## AegisLoop Architecture
 
-## Pillar 1 — Token FinOps & ROI-Aware Routing
+The following diagram shows how AegisLoop identifies failures, routes them to the appropriate fix domain, validates improvements, and feeds the updated AI system back into the loop.
+![AegisLoop Mermaid Diagram](AegisLoopMermaidDiagram.png)
 
-Technical mechanism to answer where money goes and why.
+## Fix Domains
 
-- **Modeled spend & value:** 12 enterprise workflows, each with outcomes, hours saved, loaded wage, direct revenue.
-- **ROI-aware routing by complexity:**
-  - `complexity < flashThreshold` → quantized 8B
-  - `complexity < frontierThreshold` → Flash
-  - Otherwise → frontier model
-- **Adjustable thresholds** in the UI with automatic cross-clamping — you cannot invert tiers.
-- **Semantic caching:** Modeled billed volume drops by `hitPotential × 0.85`. Heuristic, not measured cache.
-- **Prompt-bloat pruning toggle:** Models 680-token pruning from bloat rules.
-- **Routing ledger:** 12-workload ledger showing which Frontier workloads get demoted.
+| **Fix Domain** | **What It Means** |
+|---|---|
+| **Code** | Fix broken tools, retrievers, or application logic. |
+| **Context** | Identify and suggest missing or incorrect business rules. |
+| **Policy** | Send conflicting definitions to a human owner for a decision. |
 
-**Modeled pricing assumptions — simulation only, not universal provider prices:**
+---
 
-- Frontier pricing: $15 / $60 per million tokens
-- Cache lookup pricing: $0.10 per million lookups
+## The Living Loop
 
-This is the difference between modeled savings and measured production savings. The prototype does not connect to live billing.
+1. **Observe:** Capture user edits, retries, abandoned outputs, and other product events.
+2. **Measure:** Connect failure patterns to token usage and AI operating costs.
+3. **Diagnose:** Analyze context, application behavior, and business rules to identify likely causes.
+4. **Triage:** Classify each issue as a code, context, or policy problem.
+5. **Propose:** Generate evidence-backed fixes for engineering review or human approval.
+6. **Validate:** Test proposed changes against relevant examples and quality checks.
+7. **Improve:** Deploy approved changes and monitor whether accuracy improves and unnecessary costs decrease.
 
-## Pillar 2 — Data Analyst AI Agent & Context Ablation
+The updated system generates new product telemetry, allowing the cycle to continue.
 
-Which context actually helps?
+---
 
-- **20 Text-to-SQL cases** in `sqlBenchmarks.ts`, **10 rules:** 5 core, 3 patch, 2 bloat.
-- Each case explicitly declares `requiredRuleIds`. Simplification for deterministic ablation — does not prove generalization to unseen SQL.
-- **Toggles:** Turn any of 10 rules on/off and watch simulated accuracy (35% → 70% → 95%) and token overhead recompute live.
-- **Leave-one-out Shapley efficiency:** `efficiencyPer100Tokens = marginalAccuracyGain / tokenWeight × 100`
-- **Structural survival verdicts:** `retain_core`, `audit_dormant`, `scoped_guardrail`, `prune_bloat`
-- **Diff inspector:** 20-case SQL diffs, including `sql_020` which I intentionally left open for iteration 2 so the loop doesn't pretend to hit a fake 100%.
+## The Goal
 
-**Limitation:** `RULE_HINT_KEYWORDS` uses deterministic keyword matching, not semantic embeddings.
+**Don't just track AI costs. Understand what causes them, fix the underlying problems, and measure whether those fixes work.**
 
-## Pillar 3 — AI Product Telemetry & Edit Forensics
+AegisLoop brings AI spending, product behavior, and system improvement into one continuous feedback loop.
 
-How humans actually interact with outputs.
 
-- **120 seeded sessions** (mulberry32), **52 hand-typed instruction events**
-- **Signals:** Acceptance, editing, regeneration, abandonment, manual overrides
-- **Costs:** Productive vs wasted modeled spend — tokens burned inside retry loops
-- **Latency:** `signalCaptureLatencySec` — gap between wrong output and captured correction
-- **Diffs:** Side-by-side agent-vs-human edit diffs, surface-by-surface breakdown, high-friction session log
+The Four Core Components
+------------------------
 
-These are not real users or production logs — seeded scenarios to test diagnostic logic.
+### 1\. Product Telemetry — Understand Failure
 
-## Pillar 4 — The Living Loop
+Capture privacy-conscious interaction signals such as edits, regenerations, abandonment, semantic drift, and token usage.
 
-My addition. Steps 1-3 are the technical "how." Step 4 is the diagnostic "why and when."
+Focus on aggregated failure patterns rather than employee surveillance.
 
-Right after I got the first three steps working, I hit the real wall: **the system only knew how to fix the two or three failure modes I had already anticipated.** In a real company, new schemas and edge cases break next Tuesday. How do you diagnose unseen problems as they show up — and decide whether the fix belongs in code, prompt context, or human policy — without turning AI logs into creepy employee surveillance?
+### 2\. FinOps Ledger — Measure the Cost
 
-### What Step 4 adds:
+Connect AI usage with task outcomes to measure:
 
-- **Speed (signal freshness):** A mistake only teaches while its context is still warm. Every session tracks `signalCaptureLatencySec`.
-- **Reward, not pain:** An AI doesn't have a body, so pain or punishment is the wrong mental model. Instead: *was the output good, full, and complete?* That maps to `R ∈ [0, 1]` — `1.0` accepted, `1.0 − editDistance` edited, `0.0` abandoned. Modeled signal, not complete quality measure.
-- **Multi-function growth (two-factor rule survival):** A rule only earns permanent residency in global prompt if it helps across ≥2 templates — unless it's a strict factual guardrail (like fiscal year starts Feb 1). Pairing structural check with empirical Shapley gives two defenses against bloat: `retain_core`, `audit_dormant`, `scoped_guardrail`, `prune_bloat`.
-- **Symptom-vs-cause diagnosis:** Hardcoding one Q1 revenue number fixes a symptom. Adding fiscal calendar + currency-join conventions as one rule fixes the cause. Rule: cause-level fix prevents ≥2 distinct correction patterns (`remediationBreadthCount >= 2`).
-- **The 10× repetition trigger:** When someone types same guardrail by hand ≥10 times, system notices.
-  - 12× from one user (e.g., lowercase SQL aliases) → save to **personal profile memory**, don't pollute global prompt
-  - 13× across multiple users (≥3 people same workaround) → escalate as **org-wide context patch candidate**
-  - 6× pattern → stays quiet below threshold
-  - These are heuristics, not scientifically validated universal rules
-- **Manual Effort Index as headline metric:** Accuracy looks great in a notebook, but in production nobody has ground-truth for every ad-hoc question. So: `MEI = (manualEdits + regenerations + handTypedOverrides) / sessions × 100`. Baseline 160.8 → 22.5 simulated.
-- **Humans own outcomes (two layers, zero surveillance):**
-  - **Software Layer:** catches edits, clusters retries, prunes dead rules
-  - **Human Policy Layer:** handles silent dissatisfaction via quick end-of-session check *"Was this good, full, and complete?"*
-  - **Non-Surveillance Principle:** AegisLoop must not score, rank, or judge employees. Aggregation by AI workflow, model tier, and table schema — never employee identity. Employee scoring would make people accept bad outputs to protect metrics, destroying the correction signal.
+*   Cost per successful task
+    
+*   Waste from retries and abandoned outputs
+    
+*   Context efficiency and token overhead
+    
 
-## The Math Under the Hood
+Turn spending data into actionable engineering insights.
 
-Exact, division-safe, test-locked formulas preserved from implementation:
+### 3\. Context Brain — Retrieve What Matters
 
-```text
-grossValueUsd = outcomes × hoursSaved × loadedWage + directRevenue
-netRoiRatio = (grossValue - spend) / max(spend, 0.01)
-costPerVerifiedOutcome = spend / max(1, outcomes)
+Maintain versioned business rules, database schemas, verified query examples, and known failure patterns.
 
-Routing:
-complexity < flashThreshold      → quantized 8B
-complexity < frontierThreshold   → Flash
-otherwise                       → frontier model  ($15/$60 per 1M tokens)
+Retrieve relevant context instead of sending the entire knowledge base with every request.
 
-Cache:
-billedVolumeReduction = hitPotential × 0.85
-lookupPrice = $0.10 per million lookups
+### 4\. Self-Healing Engine — Diagnose and Improve
 
-Context Efficiency:
-efficiencyPer100Tokens = marginalAccuracyGain / tokenWeight × 100
+Cluster recurring failures, identify likely root causes, and classify each issue :
+| **Fix Domain** | **What It Means** |
+|---|---|
+| **Code** | Fix broken tools, retrievers, or application logic. |
+| **Context** | Identify and suggest missing or incorrect business rules. |
+| **Policy** | Send conflicting definitions to a human owner for a decision. |
 
-MEI = (manualEdits + regenerations + handTypedOverrides) / sessions × 100
+The engine proposes changes for review rather than silently modifying production systems.
 
-Reward:
-Accepted:  R = 1.0
-Edited:    R = 1.0 - editDistance
-Abandoned: R = 0.0
+The Living Loop
+---------------
 
-Annualized = (FinOps routing savings + recovered retry-loop spend) × 12
-```
+Plain textANTLR4BashCC#CSSCoffeeScriptCMakeDartDjangoDockerEJSErlangGitGoGraphQLGroovyHTMLJavaJavaScriptJSONJSXKotlinLaTeXLessLuaMakefileMarkdownMATLABMarkupObjective-CPerlPHPPowerShell.propertiesProtocol BuffersPythonRRubySass (Sass)Sass (Scss)SchemeSQLShellSwiftSVGTSXTypeScriptWebAssemblyYAMLXML`   Observe → Cluster → Diagnose → Propose   ↑                         ↓Verify ← Deploy After Approval   `
 
-Interpretation of edit distance, ROI, and reward depends on data contracts in `types/aegis.ts`.
+1.  Detect recurring failure patterns.
+    
+2.  Group related events into failure clusters.
+    
+3.  Diagnose the likely root cause.
+    
+4.  Generate a proposed code, context, or policy fix.
+    
+5.  Request review from the responsible owner.
+    
+6.  Measure whether the approved change improves outcomes.
+    
 
-## Dashboard — Four Tabs
+Metrics That Matter
+-------------------
 
-**1. Token FinOps & Adaptive Router (Step 1)** — Drag complexity-threshold sliders (with automatic cross-clamping), flip semantic cache and bloat-pruning toggles, inspect 12-workload routing ledger.
+*   **CPST:** Cost per successful task.
+    
+*   **Waste Ratio:** Share of AI spending associated with defined waste events.
+    
+*   **Context ROI:** Accuracy improvement relative to additional context tokens.
+    
+*   **MTTCH:** Mean Time to Context Healing.
+    
+*   **Context Coverage:** Share of queries for which retrieved context proves useful.
+    
 
-**2. Data Agent Lab & Context Ablation (Step 2)** — Toggle any of 10 context rules and watch SQL accuracy (35% → 70% → 95%) and token overhead recompute live. Shows empirical LOO Shapley efficiency + Step 4 structural verdicts + 20-case SQL diff inspector. `sql_020` intentionally left unresolved.
+Implementation Stack
+--------------------
 
-**3. Product Telemetry & Edit Forensics (Step 3)** — 120 sessions into acceptance funnel, productive-vs-wasted waterfall, surface-by-surface table, agent-vs-human edit diffs, top high-friction sessions.
+**LayerProposed technology**TelemetryOpenTelemetry + Langfuse / LangSmithFinOpsClickHouse + dbtContextMarkdown, YAML, Qdrant / WeaviateDiagnosisLLM-assisted failure triageWorkflowGitHub Actions + reviewed pull requests
 
-**4. The Living Loop & Synthesis (Step 4)** — Walks through 6-step cycle `Notice → Cluster → Find Root → Propose → Prune → Confirm` with live numbers, **Repetition Trigger & Preference Filter table** (12× single-user → personal memory, 13× multi-user → global patch, 6× → below threshold), **Two-Layer Governance panel**, **Non-Surveillance Ethics Pledge**, and one-click case-study export.
+_These are proposed integration choices, not claims that every integration is already implemented._
 
-## Quickstart & Reproducibility
+Privacy and Governance
+----------------------
+
+*   Avoid storing raw prompts and personally identifiable information in telemetry.
+    
+*   Analyze aggregated failure patterns rather than individual employee performance.
+    
+*   Require human approval for proposed fixes.
+    
+*   Assign every context rule an owner and a review date.
+    
+*   Escalate ambiguous business definitions instead of attempting to solve organizational disagreements with prompts.
+    
+
+Current Status
+--------------
+
+AegisLoop is being developed as a deterministic, offline simulation of AI cost optimization, context ablation, product telemetry, and feedback-driven diagnostics.
+
+Its current benchmark results are modeled outputs, not verified production savings. Live integrations, real-world validation, and automated pull-request workflows remain future development directions.
+
+The Vision
+----------
+
+**Don't just monitor AI failures. Build a system that learns from them.**
+
+AegisLoop aims to help teams make AI systems more cost-efficient, accurate, and reliable through measurable, reviewable improvements.
+
+**Built in public. Open to feedback and contributions.**
+
+If you're building AI systems for real-world business workflows, explore the project, share your feedback, and contribute.
+
+That question is why I designed and added the fourth pillar from my own side: **The Living Loop**.
+
+> **An upfront honesty note on the numbers:** Every figure in this repo (the 83.2% drop in monthly token spend, the 35% → 95% SQL accuracy jump, and the 160.8 → 22.5 drop in manual effort) comes from a deterministic **simulated enterprise benchmark dataset** I seeded so you can clone this repo and run the entire control plane locally with zero API keys. Treat them as a reproducible testbench showing how the loop behaves, not a live production billing statement. See [Honest limitations, why I refuse to score people & what's next](#honest-limitations-why-i-refuse-to-score-people--whats-next) below.
+
+## Quickstart
 
 ```bash
 npm install
@@ -271,66 +181,112 @@ npm test         # run all 39 deterministic engine assertions (vitest)
 npm run build    # strict type-check (tsc --noEmit) + production Vite bundle
 ```
 
-- **Seeded dataset:** 12 workflows, 5 departments, 4 model tiers, 20 Text-to-SQL cases, 10 rules (5 core / 3 patch / 2 bloat, 680 bloat tokens), 120 sessions, 52 hand-typed overrides, `mulberry32` randomness
-- **Zero** API keys, zero GPU, zero network calls at runtime
-- Consult `package.json` for runtime requirements — no Node version invented here
+Zero API keys, zero GPU, zero network calls at runtime — the entire simulation (12 enterprise AI workflows, 20 Text-to-SQL benchmark traps, 10 context rules, 120 user sessions, and 52 hand-typed prompt overrides) runs locally and reproducibly in your browser.
 
-## Repository Structure
+## The Four Steps (And Why I Added the Fourth)
 
-```text
-aegis-loop/
-├── LICENSE
-├── README.md
-├── assets/
-│   └── architecture.png
-├── package.json
-├── tsconfig.json
-├── vite.config.ts
-├── tailwind.config.js
-├── postcss.config.js
-├── index.html
-├── src/
-│   ├── main.tsx
-│   ├── App.tsx
-│   ├── index.css
-│   ├── types/
-│   │   └── aegis.ts            # locked data contracts incl. Living Loop types
-│   ├── utils/
-│   │   └── format.ts
-│   ├── data/
-│   │   ├── enterpriseSeed.ts
-│   │   ├── sqlBenchmarks.ts
-│   │   └── telemetryLogs.ts
-│   ├── engine/
-│   │   ├── tokenFinOpsEngine.ts
-│   │   ├── contextAblationEngine.ts
-│   │   ├── productTelemetryEngine.ts
-│   │   ├── livingLoopDiagnosticEngine.ts
-│   │   └── closedLoopAutopilot.ts
-│   └── components/
-│       ├── HeaderControlBar
-│       ├── KpiSummaryRibbon
-│       └── Tab1–Tab4
-└── tests/
-    └── aegisEngine.test.ts     # 39 deterministic assertions across all 4 steps
+| Step | Pillar | Role in the System | How I Approached It |
+| --- | --- | --- | --- |
+| 1 | Token FinOps & ROI-Aware Routing | Technical mechanism | Connects team token spend to actual verified outcomes, then routes low-complexity prompts off expensive frontier models onto quantized 8B models and a semantic cache. |
+| 2 | Data Analyst AI Agent & Context Ablation | Technical mechanism | Feeds business rules into a Text-to-SQL agent and uses leave-one-out Shapley ablation to measure how much accuracy each rule actually buys per 100 tokens. |
+| 3 | AI Product Telemetry & Edit Forensics | Technical mechanism | Tracks how often humans have to edit, regenerate, or abandon AI outputs, and puts a hard dollar figure on the tokens burned inside retry loops. |
+| 4 | **The Living Loop** — Diagnostic & Remedy Framework | Diagnostic philosophy (My Addition) | My own diagnostic layer: a systems-and-biobehavioral method to diagnose *new* failure modes, separate one person's style quirk from a company-wide bug, and keep human accountability with humans. |
+
+### What Step 4 (The Living Loop) adds on top of Steps 1–3
+
+Steps 1 to 3 are the technical "how." They work well once you already know what your failure buckets are. Step 4 is the diagnostic "why and when" — how I figure out where an AI system is failing in the wild and what kind of remedy actually fits:
+
+- **Speed (signal freshness):** A mistake only teaches while its context is still warm. Every session tracks `signalCaptureLatencySec` — the gap between "the output was wrong" and "the system captured the correction."
+- **Reward, not pain:** An AI doesn't have a body, so pain or punishment is the wrong mental model. Instead, every session asks a simpler question: *was the output good, full, and complete?* That maps to a reward score `R ∈ [0, 1]` (`1.0` when accepted as-is, `1.0 − editDistance` when edited, `0.0` when abandoned). A missing "yes" is enough to tell the system to try a different context patch next time.
+- **Multi-function growth (two-factor rule survival):** In biology, organs earn their keep by serving more than one function. I treat prompt rules the same way: a rule only earns permanent residency in the global prompt if it helps across multiple query patterns (≥ 2 templates) — *unless* it's a strict factual guardrail (like "our fiscal year starts February 1"). Pairing my structural check with Step 2's empirical Shapley math gives two independent defenses against prompt bloat: `retain_core`, `audit_dormant`, `scoped_guardrail`, and `prune_bloat`.
+- **Symptom-vs-cause diagnosis:** If an agent gets Q1 revenue wrong and you hardcode that one number, you fixed a symptom. If you add the company's fiscal calendar and currency-join conventions as one rule, you fixed the cause. My rule of thumb is testable: a cause-level fix prevents ≥ 2 distinct correction patterns (`remediationBreadthCount >= 2`); a symptom fix prevents 1 and gets held back for refactoring.
+- **The 10× repetition trigger:** When someone types the same guardrail into the prompt box by hand ≥ 10 times, the system notices. If only **1 person** is doing it (say, preferring lowercase SQL aliases), it offers to save it to their **personal profile memory** so we don't pollute the global prompt for everyone else. If **≥ 3 people** are typing the same workaround, it escalates to a steward as an **org-wide context patch candidate**.
+- **Manual Effort Index (MEI) as the real headline metric:** Accuracy percentages look great in a benchmark notebook, but in production nobody has pre-written ground-truth SQL for every ad-hoc question. So I measure success by how much manual work the human still has to do: `edits + regenerations + hand-typed overrides per 100 sessions`.
+- **Humans own outcomes (two layers, zero surveillance):** Not every problem belongs in software. My **Software Layer** catches edits, clusters retries, and prunes dead rules; the **Human Policy Layer** handles silent dissatisfaction via a quick end-of-session check (*"Was this good, full, and complete?"*). Above all, **AegisLoop never scores, ranks, or judges employees.**
+
+## How I Wired the Architecture
+
+```
+┌────────────────────────── src/data (deterministic seeds) ─────────────────────────┐
+│ enterpriseSeed.ts    12 workflows · 5 departments · 4 model tiers                  │
+│ sqlBenchmarks.ts     20 Text-to-SQL cases · 10 rules (5 core / 3 patch / 2 bloat,  │
+│                      680 prune-bloat tokens) + Step 4 structural metadata         │
+│ telemetryLogs.ts     120 sessions (seeded mulberry32) · reward & latency signals ·  │
+│                      edit-diff library · 52 hand-typed instruction events         │
+└──────────────┬───────────────────────────┬─────────────────────────┬────────────────┘
+               │                           │                         │
+┌──────────────▼─────────┐  ┌──────────────▼────────────┐  ┌─────────▼─────────────┐
+│ tokenFinOpsEngine.ts   │  │ contextAblationEngine.ts │  │ productTelemetry-    │
+│ routing, semantic      │  │ benchmark pass/fail,     │  │ Engine.ts            │
+│ cache, ROI math        │  │ Shapley LOO gains,       │  │ funnel, cost-of-     │
+│                        │  │ token overhead            │  │ recovery, clustering │
+└──────────────┬─────────┐  └──────────────┬────────────┘  └─────────┬─────────────┘
+               │                           │                         │
+               └──────────────┬────────────┴─────────────┬───────────┘
+                              ▼                            ▼
+     ┌────────────────────────────────────┐  ┌──────────────────────────────────┐
+     │ livingLoopDiagnosticEngine.ts      │  │ closedLoopAutopilot.ts           │
+     │ symptom-vs-cause breadth test,     │  │ promote patches · prune bloat ·  │
+     │ repetition triggers, dual rule     │  │ enable cache/prune · return the  │
+     │ survival, MEI + reward signals      │  │ before/after cycle summary       │
+     └────────────────────────────────────┘  └──────────────────────────────────┘
+                              ▼
+        React 18 + Vite + Tailwind control plane (4 tabs, KPI ribbon,
+        autopilot toggle, Seeded Demo Dataset badges)
 ```
 
-Documented structure, not independently verified listing.
+## The Math Under the Hood (Exact, Division-Safe, Test-Locked)
+
+- `grossValueUsd = outcomes × hoursSaved × loadedWage + directRevenue`
+- `netRoiRatio = (grossValue − spend) / max(spend, 0.01)`
+- `costPerVerifiedOutcome = spend / max(1, outcomes)`
+- Routing: `complexity < flashThreshold → quantized 8B`; `< frontierThreshold → flash`; else frontier ($15/$60 per 1M tokens)
+- Cache: billed volume drops by `hitPotential × 0.85`; cache lookups billed at $0.10/1M
+- `efficiencyPer100Tokens = marginalAccuracyGain / tokenWeight × 100`
+- `MEI = (manualEdits + regenerations + handTypedOverrides) / sessions × 100`
+- Reward: `R = 1.0` accepted · `R = 1.0 − editDistance` edited · `R = 0.0` rejected
+- Annualized savings = (FinOps routing savings + recovered retry-loop spend) × 12
+
+## What Happens When I Flip the Autopilot On (Simulated Benchmark Outputs)
+
+| Metric | Unoptimized Baseline | Closed-Loop Autopilot |
+| --- | --- | --- |
+| Monthly token spend (12 workflows) | **$12,937.96** | **$2,179.27** (−83.2%) |
+| Net ROI multiplier | ×151.1 | ×902.1 |
+| SQL benchmark accuracy | 35% raw → 70% static context | **95%** |
+| Prompt overhead per query | 930 tok | 435 tok (680 bloat pruned) |
+| **Manual Effort Index (per 100 sessions)** | **160.8** | **22.5** (−86%) |
+| Reward completeness (avg R) | 0.65 | 0.91 (full-reward share 41.7% → 85.0%) |
+| Product edit / regeneration rate | 58.3% / 55.0% | 15.0% / 11.7% |
+| Cost per accepted output | $0.612 | $0.280 |
+| Annualized enterprise savings | — | **$129,467** |
+
+## Walking Through the 4-Tab Control Plane
+
+1. **Token FinOps & Adaptive Router (Step 1)** — drag the complexity-threshold sliders (with automatic cross-clamping so you can't invert the tiers), flip the semantic cache and bloat-pruning toggles, and inspect the 12-workload routing ledger to see which burning Frontier workloads get demoted to Flash or Quantized 8B.
+2. **Data Agent Lab & Context Ablation (Step 2)** — toggle any of the 10 context rules on or off and watch SQL accuracy (35% → 70% → 95%) and prompt token overhead recompute live. Every rule row shows both its empirical leave-one-out Shapley efficiency and its Step 4 structural survival verdict, alongside a 20-case SQL diff inspector (including `sql_020`, which I intentionally left open for iteration 2 so the loop doesn't pretend to hit a fake 100%).
+3. **Product Telemetry & Edit Forensics (Step 3)** — breaks down the 120 sessions into an acceptance funnel, a productive-vs-wasted cost waterfall, a surface-by-surface table, side-by-side agent-vs-human edit diffs, and the top high-friction session log.
+4. **The Living Loop & Synthesis (Step 4)** — walks through my 6-step diagnostic cycle (`Notice → Cluster → Find Root → Propose → Prune → Confirm`) with live numbers, the **Repetition Trigger & Preference Filter table** (showing why a 12× single-user date habit goes to personal memory, why a 13× multi-user soft-delete fix goes to global context, and why a 6× pattern stays quiet below the threshold), the **Two-Layer Governance panel**, the **Non-Surveillance Ethics Pledge**, and a one-click case study export.
 
 ## Honest Limitations, Why I Refuse to Score People & What's Next
 
-- **Simulated, not production:** Every financial and accuracy number comes from deterministic seeded dataset for offline reproducibility. Do not cite as live production. Verification so far self-run via 39 Vitest assertions, not blind third-party review.
-- **Full-resolution & keyword-matching assumptions:** `simulateTelemetryAfterAutopilot` models optimistic upper bound where promoting a context rule fully resolves every session in its mapped failure category into clean first-try acceptance (why MEI drops 86% from 160.8 to 22.5 and cost per accepted drops $0.612 → $0.280). Benchmark cases explicitly declare `requiredRuleIds`, and `RULE_HINT_KEYWORDS` matches via deterministic keywords rather than semantic embeddings.
-- **Why I refuse to score individuals:** Telemetry aggregates strictly by **AI workflow, model tier, and table schema** — never by employee identity. The moment a company uses edit logs or retry counts to grade employees, people stop fixing hallucinated outputs and start clicking "accept" on garbage to protect metrics. Managing people belongs with human managers, not a token dashboard.
-- **How I plan to validate in real world:**
-  1. Run Step 2 + Step 4 ablation and self-healing loop against public execution-based Text-to-SQL benchmarks (**BIRD-SQL** and **Spider 2.0**) with live models
-  2. Test telemetry package with 1–2 design partners on anonymized logs
-  3. Package a 7-day **AI Waste Audit** — one week of logs to map token spend, accuracy leakage, root causes vs personal preferences, and dead-weight prompt rules ready to prune
+- **Simulated, not production:** Every financial and accuracy number in this repo comes from a deterministic seeded dataset I built for offline reproducibility. Do not cite them as live production measurements. Verification so far is self-run via the 39 Vitest assertions, not blind third-party review.
+- **Full-resolution & keyword-matching assumptions:** In the simulation, `simulateTelemetryAfterAutopilot` models an optimistic upper bound where promoting a context rule fully resolves every session in its mapped failure category into a clean first-try acceptance (which is why MEI drops 86% from 160.8 to 22.5 and cost per accepted output drops from $0.612 to $0.280). Likewise, benchmark cases explicitly declare their `requiredRuleIds`, and `RULE_HINT_KEYWORDS` matches hand-typed instructions to catalog rules via deterministic keywords rather than semantic embeddings.
+- **Why I refuse to score individuals (the anti-surveillance boundary):** Telemetry in AegisLoop aggregates strictly by **AI workflow, model tier, and table schema** — never by employee identity. The moment a company uses AI edit logs or retry counts to grade employees, people stop fixing hallucinated outputs and start clicking "accept" on garbage just to protect their metrics. Managing people belongs with human managers, not a token dashboard.
+- **How I plan to validate this in the real world:** (1) Run the Step 2 + Step 4 ablation and self-healing loop against public execution-based Text-to-SQL benchmarks (**BIRD-SQL** and **Spider 2.0**) with live models; (2) test the telemetry package with 1–2 design partners on anonymized logs; and (3) package a 7-day **"AI Waste Audit"** — taking one week of logs to map where token spend and accuracy are leaking, which user edits are true root causes vs. personal preferences, and which prompt rules are dead weight ready to be pruned.
 
-These are planned activities, not completed work.
+## Repository Structure
 
-## Contributing & License
-
-Contributions welcome for simulation fidelity, benchmark adapters, Living Loop heuristics. Open an issue before changing metrics/formulas/honesty constraints. No real user data or credentials — keep offline & deterministic.
-
-`LICENSE` file presence does not establish its terms — consult the file directly for license type.
+```
+aegis-loop/
+├── LICENSE · README.md · package.json · tsconfig.json · vite.config.ts · tailwind.config.js · postcss.config.js · index.html
+├── src/
+│   ├── main.tsx · App.tsx · index.css
+│   ├── types/aegis.ts            # locked data contracts (incl. Living Loop diagnostic types)
+│   ├── utils/format.ts           # currency, percentage, ROI, and className helpers
+│   ├── data/                     # enterpriseSeed · sqlBenchmarks · telemetryLogs
+│   ├── engine/                   # tokenFinOps · contextAblation · productTelemetry
+│   │                             # livingLoopDiagnostic · closedLoopAutopilot
+│   └── components/               # HeaderControlBar · KpiSummaryRibbon · Tab1–Tab4
+└── tests/aegisEngine.test.ts     # 39 deterministic assertions across all 4 steps
+```
