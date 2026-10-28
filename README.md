@@ -38,7 +38,7 @@ The following diagram shows how AegisLoop identifies failures, routes them to th
 ---
 
 ## The Living Loop
-![Living loop flow circle](LivingLoop.jpeg)
+![Living loop flow circle](LivingLoop.jpg)
 1. **Observe:** Capture user edits, retries, abandoned outputs, and other product events.
 2. **Measure:** Connect failure patterns to token usage and AI operating costs.
 3. **Diagnose:** Analyze context, application behavior, and business rules to identify likely causes.
